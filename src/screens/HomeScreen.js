@@ -1,38 +1,55 @@
 // src/screens/HomeScreen.js
-import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  Platform,
-} from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, Platform } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { UNIVERSITIES } from '../constants/universities';
+import { db } from '../services/firebase';
+import { collection, getDocs } from 'firebase/firestore';
 
 export default function HomeScreen() {
-  // This stores whichever university the student picks
   const [selectedUniversity, setSelectedUniversity] = useState(null);
+  const [dbStatus, setDbStatus] = useState('Connecting...');
 
-  // Find the full university object that matches the selected id
+  useEffect(() => {
+  const testConnection = async () => {
+    try {
+      // Test Firebase
+      await getDocs(collection(db, 'test'));
+
+      // Test Cloudinary reachability
+      const cloudName = process.env.EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME;
+      const cloudRes = await fetch(
+        `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
+        { method: 'OPTIONS' }
+      );
+
+      setDbStatus('Firebase + Cloudinary connected');
+    } catch (error) {
+      setDbStatus('Error: ' + error.message);
+    }
+  };
+  testConnection();
+}, []);
+
   const selectedUni = UNIVERSITIES.find(u => u.id === selectedUniversity);
 
   return (
     <View style={styles.container}>
-
-      {/* App Header */}
-      <Text style={styles.title}>🏠 RentWise</Text>
+      <Text style={styles.title}>RentWise</Text>
       <Text style={styles.subtitle}>Find rooms near your university</Text>
 
-      {/* University Picker */}
+      {/* Firebase status indicator */}
+      <Text style={styles.status}>{dbStatus}</Text>
+
       <View style={styles.pickerWrapper}>
-        <Text style={styles.label}>🎓 Select your university</Text>
+        <Text style={styles.label}>Select your university</Text>
         <View style={styles.pickerBox}>
           <Picker
             selectedValue={selectedUniversity}
             onValueChange={(itemValue) => setSelectedUniversity(itemValue)}
             style={styles.picker}
           >
-            <Picker.Item label="- Choose a university -" value={null} />
+            <Picker.Item label="-- Choose a university --" value={null} />
             {UNIVERSITIES.map((uni) => (
               <Picker.Item key={uni.id} label={uni.name} value={uni.id} />
             ))}
@@ -40,15 +57,13 @@ export default function HomeScreen() {
         </View>
       </View>
 
-      {/* Confirmation message shown after picking */}
       {selectedUni && (
         <View style={styles.confirmBox}>
           <Text style={styles.confirmText}>
-            📍 Searching near {selectedUni.name}
+            Searching near {selectedUni.name}
           </Text>
         </View>
       )}
-
     </View>
   );
 }
@@ -70,7 +85,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#718096',
     marginTop: 8,
-    marginBottom: 40,
+    marginBottom: 12,
+  },
+  status: {
+    fontSize: 12,
+    color: '#48BB78',
+    marginBottom: 28,
   },
   pickerWrapper: {
     width: '100%',
